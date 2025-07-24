@@ -55,12 +55,12 @@ create-release:
       --form "name=Release $CI_COMMIT_TAG" \
       --form "tag_name=$CI_COMMIT_TAG" \
       --form "description=Automated release for $CI_COMMIT_TAG" \
-      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases"
+      "$GITLAB_DOMAIN/api/v4/projects/precisionplanit%2Fbeszel-agent-win-amd64/releases"
 
     echo "Uploading asset..."
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
       --upload-file "$ZIP_NAME" \
-      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/uploads" > upload_response.json
+      "$GITLAB_DOMAIN/api/v4/projects/precisionplanit%2Fbeszel-agent-win-amd64/uploads" > upload_response.json
 
     UPLOAD_URL=$(jq -r '.url' upload_response.json)
 
@@ -69,4 +69,4 @@ create-release:
       --request POST \
       --header "Content-Type: application/json" \
       --data "{\"name\":\"$ZIP_NAME\",\"url\":\"$GITLAB_DOMAIN/$CI_PROJECT_PATH$UPLOAD_URL\"}" \
-      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases/$CI_COMMIT_TAG/assets/links"
+      "$GITLAB_DOMAIN/api/v4/projects/precisionplanit%2Fbeszel-agent-win-amd64/releases/$CI_COMMIT_TAG/assets/links"
