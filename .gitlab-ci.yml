@@ -5,8 +5,9 @@ stages:
 variables:
   BINARY_NAME: "beszel-agent_windows_amd64.exe"
   GITLAB_DOMAIN: "https://gitlab.prplanit.com"
+  GLAB_TOKEN: "$GITLAB_TOKEN"
   OUTPUT_DIR: "beszel-agent_windows_amd64-$CI_COMMIT_TAG"
-  ZIP_NAME: "$OUTPUT_DIR.zip"
+  ZIP_NAME: "$OUTPUT_DIR.zip"variables:
 
 build-release:
   before_script:  |
