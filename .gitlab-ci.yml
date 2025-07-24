@@ -49,56 +49,28 @@ create-release:
   rules:
     - if: $CI_COMMIT_TAG
   script: |
-    echo "Checking for zip file:"
-    ls -lh "$ZIP_NAME" || echo "Zip not found"
-
-    echo "Installing curl and jq..."
-    apk add --no-cache curl jq
+    echo "Installing curl and glab..."
+    apk add --no-cache curl jq bash
+    wget -qO /usr/local/bin/glab https://git.io/glab && chmod +x /usr/local/bin/glab
 
     echo "Creating release $CI_COMMIT_TAG"
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" --request POST \
       --form "name=Release $CI_COMMIT_TAG" \
       --form "tag_name=$CI_COMMIT_TAG" \
       --form "description=Automated release for $CI_COMMIT_TAG" \
-      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases"
+      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases" || echo "Release might already exist"
 
-    echo "Publishing ZIP to Generic Package Registry..."
-    curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
-      --upload-file "$ZIP_NAME" \
-      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/beszel-agent/${CI_COMMIT_TAG}/${ZIP_NAME}"
+    echo "Uploading as Generic Package..."
+    glab api projects/$CI_PROJECT_ID/packages/generic/beszel-agent/$CI_COMMIT_TAG/${ZIP_NAME} \
+      -X PUT --input "${ZIP_NAME}"
 
-    PACKAGE_URL="${GITLAB_DOMAIN}/${CI_PROJECT_PATH}/-/packages"
+    echo "Uploaded: $ZIP_NAME to version: $CI_COMMIT_TAG"
+  
+    echo "Adding asset link to release - $PACKAGE_LINK"
 
-    echo "Adding asset link to release - $PACKAGE_URL"
-    curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
-      --request POST \
-      --header "Content-Type: application/json" \
-      --data "{\"name\":\"$ZIP_NAME\",\"url\":\"$PACKAGE_URL\",\"link_type\":\"package\"}" \
-      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases/$CI_COMMIT_TAG/assets/links"
-    echo "Checking for zip file:"
-    ls -lh "$ZIP_NAME" || echo "Zip not found"
-
-    echo "Installing curl and jq..."
-    apk add --no-cache curl jq
-
-    echo "Creating release $CI_COMMIT_TAG"
-    curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" --request POST \
-      --form "name=Release $CI_COMMIT_TAG" \
-      --form "tag_name=$CI_COMMIT_TAG" \
-      --form "description=Automated release for $CI_COMMIT_TAG" \
-      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases"
-
-    echo "Uploading asset..."
-    curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
-     --form "file=@$ZIP_NAME" \
-     "$CI_API_V4_URL/projects/$CI_PROJECT_ID/uploads" > upload_response.json
-    
-    FULL_URL="${GITLAB_DOMAIN}/${CI_PROJECT_PATH}/-/jobs/${BUILD_JOB_ID}/artifacts/raw/${ZIP_NAME}"
-
-    echo "Adding asset link to release - $FULL_URL"
-
+    PACKAGE_LINK="${GITLAB_DOMAIN}/${CI_PROJECT_PATH}/-/packages"
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
       --request POST \
       --header "Content-Type: application/json" \
-      --data "{\"name\":\"$ZIP_NAME\",\"url\":\"$FULL_URL\",\"link_type\":\"other\"}" \
+      --data "{\"name\":\"$ZIP_NAME\",\"url\":\"$PACKAGE_LINK\",\"link_type\":\"package\"}" \
       "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases/$CI_COMMIT_TAG/assets/links"
