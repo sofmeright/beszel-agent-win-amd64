@@ -67,12 +67,15 @@ create-release:
      --form "file=@$ZIP_NAME" \
      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/uploads" > upload_response.json
     
-    FULL_URL="${GITLAB_DOMAIN}/${CI_PROJECT_PATH}/-/archive/${CI_COMMIT_TAG}/${ZIP_NAME}"
+    # Extract the relative URL like /uploads/abcd1234/yourfilename.zip
+    RELATIVE_URL=$(jq -r '.url' upload_response.json)
 
-    echo "Adding asset link to release - $FULL_URL"
+    # Prepend your GitLab domain
+    FULL_URL="${CI_SERVER_URL}/${CI_PROJECT_PATH}${RELATIVE_URL}"
 
+    # Add the asset link to the release
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
-      --request POST \
-      --header "Content-Type: application/json" \
-      --data "{\"name\":\"${ZIP_NAME}\",\"url\":\"$FULL_URL\",\"link_type\":\"other\"}" \
-      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases/$CI_COMMIT_TAG/assets/links"
+        --request POST \
+        --header "Content-Type: application/json" \
+        --data "{\"name\":\"$ZIP_NAME\",\"url\":\"$FULL_URL\",\"link_type\":\"other\"}" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases/$CI_COMMIT_TAG/assets/links"
