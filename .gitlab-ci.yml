@@ -34,6 +34,7 @@ build-release:
 
     echo "Release ZIP ready: $ZIP_NAME"
     echo "Artifact to upload:"
+    cd "$CI_PROJECT_DIR"
     ls -lh "$ZIP_NAME"
 
   # You can uncomment the artifact section once the 502 issue is resolved
