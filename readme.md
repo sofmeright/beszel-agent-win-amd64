@@ -10,7 +10,7 @@ It has a friendly web interface, simple configuration, and is ready to use out o
 ## Usage:
 
 Gitlab requires authentication which means you have to be a "user" to pull packages from the generic package registry. 
-I failed to find a workaround.... So if you want to pull these images from a script you can be the "public_api" user with an API token of ```glpat-Gtpqt1aHVdPSS11XdREm```.
+I failed to find a workaround.... So if you want to pull these binaries from a script you can be the "public_api" user with an API token of ```glpat-Gtpqt1aHVdPSS11XdREm```.
 I can not guarantee availability for financial reasons, but I will do my best. 🍜🤣 For best results, clone this repo or make your own pipeline from the inspiration. Then of course you are welcome to manually download while you can.
 
 To pull a [release](https://gitlab.prplanit.com/precisionplanit/beszel-agent-win-amd64/-/packages) programmatically using curl:
