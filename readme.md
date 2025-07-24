@@ -10,7 +10,7 @@ It has a friendly web interface, simple configuration, and is ready to use out o
 ## Usage:
 
 Gitlab requires users authenticate to pull packages from the generic package registry. I failed to find a workaround....
-Due to this requirement I did create a new user named "public_api" with an API token of ```glpat-Gtpqt1aHVdPSS11XdREm```. 
+Due to this requirement I did create a new user named "public_api" with an API token of ```glpat-Gtpqt1aHVdPSS11XdREm```.
 The max expiry of a personal accesss token is 1 year! 🥴 We will worry about automating that ~ later. 🙈
 
 To pull a [release](https://gitlab.prplanit.com/precisionplanit/beszel-agent-win-amd64/-/packages) programmatically using curl:
