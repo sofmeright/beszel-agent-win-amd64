@@ -75,6 +75,7 @@ create-release:
         --upload-file "$ZIP_NAME" \
         "$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/packages/generic/beszel-agent/$CI_COMMIT_TAG/$ZIP_NAME"                    >/dev/null
 
+    echo "Need to determine the uploaded package's URL..."
     echo "Getting packages for project..."
     PACKAGE_JSON=$(curl --silent --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
       "$CI_API_V4_URL/projects/$CI_PROJECT_ID/packages")
@@ -99,10 +100,9 @@ create-release:
       exit 1
     fi
 
-    DOWNLOAD_URL="${GITLAB_DOMAIN}/${CI_PROJECT_PATH}/-/package_files/${PACKAGE_FILE_ID}/download"
-    echo "✅ Final download link: $DOWNLOAD_URL"
+    PACKAGE_LINK="${GITLAB_DOMAIN}/${CI_PROJECT_PATH}/-/package_files/${PACKAGE_FILE_ID}/download"
+    echo "✅ The uploaded package's URL is $DOWNLOAD_URL."
 
-    PACKAGE_LINK="${GITLAB_DOMAIN}/${CI_PROJECT_PATH}/-/packages"
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
       --request POST \
       --header "Content-Type: application/json" \
