@@ -9,6 +9,9 @@ variables:
   ZIP_NAME: "$OUTPUT_DIR.zip"
 
 build-release:
+  artifacts:
+    paths:
+      - "$ZIP_NAME"
   before_script:  |
     echo "Setting up Go build environment..."
     echo "Installing dependencies... (git)"
@@ -35,11 +38,10 @@ build-release:
     echo "Copying zip to project directory for release upload"
     mv "$ZIP_NAME" "$CI_PROJECT_DIR/"
 
+create-release:
   artifacts:
     paths:
       - "$ZIP_NAME"
-
-create-release:
   stage: release
   image: curlimages/curl:latest
   rules:
