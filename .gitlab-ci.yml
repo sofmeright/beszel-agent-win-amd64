@@ -12,7 +12,7 @@ build-release:
   before_script:  |
     echo "Setting up Go build environment..."
     echo "Installing dependencies... (git, zip)"
-    apk add --no-cache git zip
+    apk add --no-cache git p7zip-full
   environment: production
   image: golang:1.24.5-alpine3.22
   rules:
@@ -30,7 +30,7 @@ build-release:
     mkdir -p "$CI_PROJECT_DIR/$OUTPUT_DIR"
     mv $BINARY_NAME "$CI_PROJECT_DIR/$OUTPUT_DIR/"
     cd "$CI_PROJECT_DIR"
-    zip -r "$ZIP_NAME" "$OUTPUT_DIR"
+    7z a $ZIP_NAME $OUTPUT_DIR/*
 
     echo "Release ZIP ready: $ZIP_NAME"
     echo "Artifact to upload:"
