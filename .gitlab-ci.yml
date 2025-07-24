@@ -12,7 +12,7 @@ build-release:
   before_script:  |
     echo "Setting up Go build environment..."
     echo "Installing dependencies... (git, zip)"
-    apk add --no-cache git p7zip-full
+    apk add --no-cache git p7zip
   environment: production
   image: golang:1.24.5-alpine3.22
   rules:
