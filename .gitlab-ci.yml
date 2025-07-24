@@ -29,8 +29,8 @@ build-release:
     echo "Packaging release..."
     mkdir -p "$CI_PROJECT_DIR/$OUTPUT_DIR"
     mv $BINARY_NAME "$CI_PROJECT_DIR/$OUTPUT_DIR/"
-    cd "$CI_PROJECT_DIR"
-    zip -r "$ZIP_NAME" "$OUTPUT_DIR"
+    cd "$CI_PROJECT_DIR/$OUTPUT_DIR"
+    zip "$CI_PROJECT_DIR/$ZIP_NAME" "$BINARY_NAME"
 
     echo "Release ZIP ready: $ZIP_NAME"
     echo "Artifact to upload:"
