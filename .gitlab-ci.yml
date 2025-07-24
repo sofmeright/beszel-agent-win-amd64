@@ -15,7 +15,7 @@ build-release:
     echo "AntParade GitOps 🐜 - Preparing $CI_JOB_IMAGE image for build..."
     echo "---------------------------------------------------------------------------"
     echo "Installing dependencies... (git, zip)"
-    apk add --no-cache git zip
+    apk add --no-cache git zip                                                            >/dev/null
   environment: production
   image: golang:1.24.5-alpine3.22
   rules:
@@ -30,13 +30,13 @@ build-release:
     cd beszel/beszel/cmd/agent                                                            >/dev/null
 
     echo "Building $BINARY_NAME from the source for $OUTPUT_DIR..."
-    GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-w -s" -o $BINARY_NAME
+    GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-w -s" -o $BINARY_NAME     >/dev/null
 
     echo "Packaging release into $ZIP_NAME..."
-    mkdir -p "$CI_PROJECT_DIR/$OUTPUT_DIR"
-    mv $BINARY_NAME "$CI_PROJECT_DIR/$OUTPUT_DIR/"
-    cd "$CI_PROJECT_DIR"
-    zip -r "$ZIP_NAME" "$OUTPUT_DIR"
+    mkdir -p "$CI_PROJECT_DIR/$OUTPUT_DIR"                                                >/dev/null
+    mv $BINARY_NAME "$CI_PROJECT_DIR/$OUTPUT_DIR/"                                        >/dev/null
+    cd "$CI_PROJECT_DIR"                                                                  >/dev/null
+    zip -r "$ZIP_NAME" "$OUTPUT_DIR"                                                      >/dev/null
 
     echo "$ZIP_NAME has been packaged, here are its details:"
     ls -lh "$ZIP_NAME"
@@ -52,7 +52,7 @@ create-release:
     echo "AntParade GitOps 🐜 - Preparing $CI_JOB_IMAGE image for release upload tasks"
     echo "---------------------------------------------------------------------------"
     echo "Installing dependencies... (bash curl jq)"
-    apk add --no-cache bash curl jq
+    apk add --no-cache bash curl jq                                                       >/dev/null
   dependencies:
     - build-release
   stage: release
@@ -67,13 +67,13 @@ create-release:
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" --request POST \
       --form "name=Release $CI_COMMIT_TAG" \
       --form "tag_name=$CI_COMMIT_TAG" \
-      --form "description=Automated release for $CI_COMMIT_TAG" \
-      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases" || echo "Release might already exist"
+      --form "description=AntParade GitOps 🐜 packaged $CI_COMMIT_TAG release of $CI_PROJECT_NAME." \
+      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases" || echo "Release might already exist"                                     >/dev/null
 
     echo "Uploading $ZIP_NAME to the $CI_PROJECT_NAME gitlab package registry..."
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
         --upload-file "$ZIP_NAME" \
-        "$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/packages/generic/beszel-agent/$CI_COMMIT_TAG/$ZIP_NAME"
+        "$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/packages/generic/beszel-agent/$CI_COMMIT_TAG/$ZIP_NAME"                    >/dev/null
 
     echo "Querying GitLab for package files..."
     API_RESPONSE=$(curl --silent --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
