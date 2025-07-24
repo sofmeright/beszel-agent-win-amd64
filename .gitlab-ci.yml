@@ -54,7 +54,7 @@ create-release:
       "https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/uploads" > upload_response.json
 
     - UPLOAD_URL=$(jq -r '.url' upload_response.json)
-    - echo "Adding asset link to release: $UPLOAD_URL"
+    - echo "Adding asset link to release- $UPLOAD_URL"
     - >
       curl --header "PRIVATE-TOKEN: $CI_JOB_TOKEN"
       --request POST
