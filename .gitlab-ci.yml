@@ -67,15 +67,7 @@ create-release:
      --form "file=@$ZIP_NAME" \
      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/uploads" > upload_response.json
     
-    cat upload_response.json
-    UPLOAD_URL=$(jq -r '.url // .direct_asset_url' upload_response.json)
-
-    # Make sure $UPLOAD_URL is not null or empty
-    if [ -z "$UPLOAD_URL" ] || [ "$UPLOAD_URL" = "null" ]; then
-      echo "Upload URL is empty or null, aborting."
-      exit 1
-    fi
-
+    UPLOAD_URL=$(jq -r '.url' upload_response.json)
     FULL_URL="${GITLAB_DOMAIN}${UPLOAD_URL}"
 
     echo "Adding asset link to release - $FULL_URL"
