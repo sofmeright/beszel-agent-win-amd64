@@ -9,12 +9,9 @@ variables:
   ZIP_NAME: "$OUTPUT_DIR.zip"
 
 build-release:
-  artifacts:
-    paths:
-      - "$ZIP_NAME"
   before_script:  |
     echo "Setting up Go build environment..."
-    echo "Installing dependencies... (git)"
+    echo "Installing dependencies... (git, zip)"
     apk add --no-cache git zip
   environment: production
   image: golang:1.24.5-alpine3.22
@@ -35,32 +32,39 @@ build-release:
     cd "$CI_PROJECT_DIR"
     zip -r "$ZIP_NAME" "$OUTPUT_DIR"
 
-    echo "Copying zip to project directory for release upload"
-    mv "$ZIP_NAME" "$CI_PROJECT_DIR/"
+    echo "Release ZIP ready: $ZIP_NAME"
+
+  # You can uncomment the artifact section once the 502 issue is resolved
+  # artifacts:
+  #   paths:
+  #     - "$ZIP_NAME"
 
 create-release:
-  artifacts:
-    paths:
-      - "$ZIP_NAME"
   stage: release
-  image: curlimages/curl:latest
+  image: alpine:latest
   rules:
     - if: $CI_COMMIT_TAG
   script: |
+    echo "Installing curl and jq..."
+    apk add --no-cache curl jq
+
     echo "Creating release $CI_COMMIT_TAG"
     curl --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" --request POST \
       --form "name=Release $CI_COMMIT_TAG" \
       --form "tag_name=$CI_COMMIT_TAG" \
       --form "description=Automated release for $CI_COMMIT_TAG" \
-      "https://$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/releases"
+      "$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/releases"
+
     echo "Uploading asset..."
     curl --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" \
       --upload-file "$ZIP_NAME" \
-      "https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/uploads" > upload_response.json
+      "$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/uploads" > upload_response.json
+
     UPLOAD_URL=$(jq -r '.url' upload_response.json)
-    echo "Adding asset link to release- $UPLOAD_URL"
+
+    echo "Adding asset link to release - $UPLOAD_URL"
     curl --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" \
       --request POST \
       --header "Content-Type: application/json" \
-      --data "{\"name\":\"$ZIP_NAME\",\"url\":\"https://$GITLAB_DOMAIN/$CI_PROJECT_PATH$UPLOAD_URL\"}" \
-      "https://$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/releases/$CI_COMMIT_TAG/assets/links"
+      --data "{\"name\":\"$ZIP_NAME\",\"url\":\"$GITLAB_DOMAIN/$CI_PROJECT_PATH$UPLOAD_URL\"}" \
+      "$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/releases/$CI_COMMIT_TAG/assets/links"
