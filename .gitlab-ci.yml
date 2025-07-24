@@ -33,6 +33,8 @@ build-release:
     zip -r "$ZIP_NAME" "$OUTPUT_DIR"
 
     echo "Release ZIP ready: $ZIP_NAME"
+    echo "Artifact to upload:"
+    ls -lh "$ZIP_NAME"
 
   # You can uncomment the artifact section once the 502 issue is resolved
   artifacts:
