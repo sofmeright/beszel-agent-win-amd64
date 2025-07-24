@@ -42,6 +42,8 @@ build-release:
       - "$ZIP_NAME"
 
 create-release:
+  dependencies:
+    - build-release
   stage: release
   image: alpine:latest
   rules:
