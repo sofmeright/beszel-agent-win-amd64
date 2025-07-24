@@ -75,21 +75,32 @@ create-release:
         --upload-file "$ZIP_NAME" \
         "$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/packages/generic/beszel-agent/$CI_COMMIT_TAG/$ZIP_NAME"                    >/dev/null
 
-    echo "Querying GitLab for package files..."
-    API_RESPONSE=$(curl --silent --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
-      "https://gitlab.prplanit.com/api/v4/projects/$CI_PROJECT_ID/packages/generic/beszel-agent/$CI_COMMIT_TAG/package_files")
+    echo "Getting packages for project..."
+    PACKAGE_JSON=$(curl --silent --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/packages")
 
-    echo "Raw API response:"
-    echo "$API_RESPONSE" | jq .
+    PACKAGE_ID=$(echo "$PACKAGE_JSON" | jq -r '.[] | select(.name=="beszel-agent" and .version=="'"$CI_COMMIT_TAG"'") | .id')
 
-    PACKAGE_FILE_ID=$(echo "$API_RESPONSE" | jq '.[0].id')
-
-    if [ -z "$PACKAGE_FILE_ID" ] || [ "$PACKAGE_FILE_ID" = "null" ]; then
-      echo "❌ Failed to extract a valid package file ID"
+    if [ -z "$PACKAGE_ID" ]; then
+      echo "❌ No matching package found for version $CI_COMMIT_TAG"
       exit 1
     fi
 
-    echo "✅ Download URL: https://gitlab.prplanit.com/$CI_PROJECT_PATH/-/package_files/$PACKAGE_FILE_ID/download"
+    echo "Found Package ID: $PACKAGE_ID"
+
+    echo "Fetching package files..."
+    PACKAGE_FILE_JSON=$(curl --silent --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/$PACKAGE_ID/package_files")
+
+    PACKAGE_FILE_ID=$(echo "$PACKAGE_FILE_JSON" | jq '.[0].id')
+
+    if [ -z "$PACKAGE_FILE_ID" ] || [ "$PACKAGE_FILE_ID" = "null" ]; then
+      echo "❌ No package files found"
+      exit 1
+    fi
+
+    DOWNLOAD_URL="${GITLAB_DOMAIN}/${CI_PROJECT_PATH}/-/package_files/${PACKAGE_FILE_ID}/download"
+    echo "✅ Final download link: $DOWNLOAD_URL"
 
     PACKAGE_LINK="${GITLAB_DOMAIN}/${CI_PROJECT_PATH}/-/packages"
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
