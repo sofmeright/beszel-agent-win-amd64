@@ -1,6 +1,26 @@
-# Beszel
+# Beszel (Agent) - Windows AMD64 Builds
 
-## This repository is for the Windows binaries only.
+### ATTENTION: This repository is for Windows binaries only.
+
+## Usage:
+
+It is very unfortunate, however gitlab does require that users are authenticated in some regard to pull packages from the generic package registry.
+Due to this requirement I did create a new user named "public_api" with an API token of glpat-Gtpqt1aHVdPSS11XdREm. 
+This will eventually expire and need to be maintained yearly! :D We will worry about automating that at a later date.
+
+To pull a release programmatically using curl:
+
+```
+curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+        "$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/packages/generic/beszel-agent/$CI_COMMIT_TAG/$ZIP_NAME" \
+        --output $CI_COMMIT_TAG/$ZIP_NAME"
+```
+Where CI_COMMIT_TAG is the release version, i.e.:
+```
+curl --header "PRIVATE-TOKEN: glpat-Gtpqt1aHVdPSS11XdREm" \
+  -L "https://gitlab.prplanit.com/api/v4/projects/33/packages/generic/beszel-agent/v0.11.1/beszel-agent_windows_amd64-v0.11.1.zip" \
+  --output beszel-agent_windows_amd64-v0.11.1.zip
+```
 
 Beszel is a lightweight server monitoring platform that includes Docker statistics, historical data, and alert functions.
 
