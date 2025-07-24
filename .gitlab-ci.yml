@@ -24,13 +24,15 @@ build-release:
     cd beszel/beszel/cmd/agent
 
     echo "Building binary..."
-    GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-w -s" -o $BINARY_NAME
+    GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-w -s" -o "$BINARY_NAME"
 
     echo "Packaging release..."
     mkdir -p "$CI_PROJECT_DIR/$OUTPUT_DIR"
-    mv $BINARY_NAME "$CI_PROJECT_DIR/$OUTPUT_DIR/"
+    mv "$BINARY_NAME" "$CI_PROJECT_DIR/$OUTPUT_DIR/"
     cd "$CI_PROJECT_DIR"
-    zip "$CI_PROJECT_DIR/$ZIP_NAME" "$BINARY_NAME"
+
+    echo "Zipping: $OUTPUT_DIR/$BINARY_NAME -> $ZIP_NAME"
+    zip "$ZIP_NAME" "$OUTPUT_DIR/$BINARY_NAME"
 
     echo "Release ZIP ready: $ZIP_NAME"
     echo "Artifact to upload:"
