@@ -59,6 +59,11 @@ create-release:
       --form "tag_name=$CI_COMMIT_TAG" \
       --form "description=Automated release for $CI_COMMIT_TAG" \
       "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases" || echo "Release might already exist"
+    
+    glab config set -h gitlab.prplanit.com api_host https://gitlab.prplanit.com
+    echo "GLAB host: $(glab config get -h gitlab.prplanit.com api_host)"
+    echo "GLAB token set: ${#GLAB_TOKEN} characters"
+    glab auth status || echo "Glab not authenticated"
 
     echo "Uploading as Generic Package..."
     glab api projects/$CI_PROJECT_ID/packages/generic/beszel-agent/$CI_COMMIT_TAG/${ZIP_NAME} \
