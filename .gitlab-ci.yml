@@ -64,8 +64,9 @@ create-release:
 
     echo "Uploading asset..."
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
-      --upload-file "$ZIP_NAME" \
-      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/uploads" > upload_response.json
+     --header "Content-Type: application/zip" \
+     --upload-file "$ZIP_NAME" \
+     "$CI_API_V4_URL/projects/$CI_PROJECT_ID/uploads" > upload_response.json
     cat upload_response.json
     UPLOAD_URL=$(jq -r '.url // .markdown // .link.url' upload_response.json)
                                             
