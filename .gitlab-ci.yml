@@ -103,7 +103,7 @@ create-release:
     fi
 
     PACKAGE_LINK="${GITLAB_DOMAIN}/${CI_PROJECT_PATH}/-/package_files/${PACKAGE_FILE_ID}/download"
-    echo "✅ The uploaded package's URL is $DOWNLOAD_URL."
+    echo "✅ The uploaded package's URL is $PACKAGE_LINK."
 
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
       --request POST \
