@@ -73,7 +73,7 @@ create-release:
   
     echo "Adding asset link to release - $PACKAGE_LINK"
 
-    PACKAGE_LINK="${GITLAB_DOMAIN}/${CI_PROJECT_PATH}/-/packages"
+    PACKAGE_LINK="${GITLAB_DOMAIN}/${CI_PROJECT_PATH}/-/packages/generic/beszel-agent/${CI_COMMIT_TAG}/${ZIP_NAME}"
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
       --request POST \
       --header "Content-Type: application/json" \
