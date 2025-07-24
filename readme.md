@@ -9,9 +9,9 @@ It has a friendly web interface, simple configuration, and is ready to use out o
 
 ## Usage:
 
-It is very unfortunate, however gitlab does require that users are authenticated in some regard to pull [packages](https://gitlab.prplanit.com/precisionplanit/beszel-agent-win-amd64/-/packages). from the generic package registry.
-Due to this requirement I did create a new user named "public_api" with an API token of glpat-Gtpqt1aHVdPSS11XdREm. 
-This will eventually expire and need to be maintained yearly! :D We will worry about automating that at a later date.
+It is unfortunate gitlab requires users authenticate to pull packages from the generic package registry afaik.
+Due to this requirement I did create a new user named "public_api" with an API token of ```glpat-Gtpqt1aHVdPSS11XdREm```. 
+The max expiry of a personal accesss token is 1 year! 🥴 We will worry about automating that ~ later. 🙈
 
 To pull a [release](https://gitlab.prplanit.com/precisionplanit/beszel-agent-win-amd64/-/packages) programmatically using curl:
 
