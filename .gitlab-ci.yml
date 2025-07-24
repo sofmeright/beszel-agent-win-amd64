@@ -4,13 +4,16 @@ stages:
 
 variables:
   BINARY_NAME: "beszel-agent_windows_amd64.exe"
+  UPSTREAM_REPO_URL: "https://github.com/henrygd/beszel.git"
   GITLAB_DOMAIN: "https://gitlab.prplanit.com"
   OUTPUT_DIR: "beszel-agent_windows_amd64-$CI_COMMIT_TAG"
   ZIP_NAME: "$OUTPUT_DIR.zip"
 
 build-release:
   before_script:  |
-    echo "Setting up Go build environment..."
+    echo "---------------------------------------------------------------------------"
+    echo "AntParade GitOps 🐜 - Preparing $CI_JOB_IMAGE image for build..."
+    echo "---------------------------------------------------------------------------"
     echo "Installing dependencies... (git, zip)"
     apk add --no-cache git zip
   environment: production
@@ -19,21 +22,23 @@ build-release:
     - if: $CI_COMMIT_TAG
   stage: build
   script: |
-    echo "Cloning tagged release- $CI_COMMIT_TAG"
-    git clone --depth 1 --branch $CI_COMMIT_TAG https://github.com/henrygd/beszel.git
-    cd beszel/beszel/cmd/agent
+    echo "---------------------------------------------------------------------------"
+    echo "AntParade GitOps 🐜 - Building $OUTPUT_DIR..."
+    echo "---------------------------------------------------------------------------"
+    echo "Cloning the $CI_COMMIT_TAG branch of $UPSTREAM_REPO_URL..."
+    git clone --depth 1 --branch $CI_COMMIT_TAG $UPSTREAM_REPO_URL                        >/dev/null
+    cd beszel/beszel/cmd/agent                                                            >/dev/null
 
-    echo "Building binary..."
+    echo "Building $BINARY_NAME from the source for $OUTPUT_DIR..."
     GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-w -s" -o $BINARY_NAME
 
-    echo "Packaging release..."
+    echo "Packaging release into $ZIP_NAME..."
     mkdir -p "$CI_PROJECT_DIR/$OUTPUT_DIR"
     mv $BINARY_NAME "$CI_PROJECT_DIR/$OUTPUT_DIR/"
     cd "$CI_PROJECT_DIR"
     zip -r "$ZIP_NAME" "$OUTPUT_DIR"
 
-    echo "Release ZIP ready: $ZIP_NAME"
-    echo "Artifact to upload:"
+    echo "$ZIP_NAME has been packaged, here are its details:"
     ls -lh "$ZIP_NAME"
 
   # You can uncomment the artifact section once the 502 issue is resolved
@@ -42,6 +47,12 @@ build-release:
       - "$ZIP_NAME"
 
 create-release:
+  before_script:  |
+    echo "---------------------------------------------------------------------------"
+    echo "AntParade GitOps 🐜 - Preparing $CI_JOB_IMAGE image for release upload tasks"
+    echo "---------------------------------------------------------------------------"
+    echo "Installing dependencies... (bash curl jq)"
+    apk add --no-cache bash curl jq
   dependencies:
     - build-release
   stage: release
@@ -49,20 +60,25 @@ create-release:
   rules:
     - if: $CI_COMMIT_TAG
   script: |
-    echo "Installing curl and glab..."
-    apk add --no-cache bash curl glab jq
-
-    echo "Creating release $CI_COMMIT_TAG"
+    echo "---------------------------------------------------------------------------"
+    echo "AntParade GitOps 🐜 - Begin tasks for upload of $BINARY_NAME $CI_COMMIT_TAG"
+    echo "---------------------------------------------------------------------------"
+    echo "Creating release $CI_COMMIT_TAG..."
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" --request POST \
       --form "name=Release $CI_COMMIT_TAG" \
       --form "tag_name=$CI_COMMIT_TAG" \
       --form "description=Automated release for $CI_COMMIT_TAG" \
       "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases" || echo "Release might already exist"
 
-    echo "Uploading as Generic Package..."
+    echo "Uploading $ZIP_NAME to the $CI_PROJECT_NAME gitlab package registry..."
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
         --upload-file "$ZIP_NAME" \
         "$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/packages/generic/beszel-agent/$CI_COMMIT_TAG/$ZIP_NAME"
+
+    PACKAGE_FILE_ID=$(curl --silent --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+      "https://gitlab.prplanit.com/api/v4/projects/$CI_PROJECT_ID/packages/generic/beszel-agent/$CI_COMMIT_TAG/package_files" | jq '.[0].id')
+
+    echo "Download URL: https://gitlab.prplanit.com/$CI_PROJECT_PATH/-/package_files/$PACKAGE_FILE_ID/download"
 
     PACKAGE_LINK="${GITLAB_DOMAIN}/${CI_PROJECT_PATH}/-/packages"
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
