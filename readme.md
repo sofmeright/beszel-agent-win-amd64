@@ -13,21 +13,21 @@ Gitlab requires authentication which means you have to be a "user" to pull packa
 I failed to find a workaround.... So if you want to pull these binaries from a script you can be the "public_api" user with an API token of ```glpat-Gtpqt1aHVdPSS11XdREm```.
 I can not guarantee availability for financial reasons, but I will do my best. 🍜🤣 For best results, clone this repo or make your own pipeline from the inspiration. Then of course you are welcome to manually download while you can.
 
-To pull a [release](https://gitlab.prplanit.com/precisionplanit/beszel-agent-win-amd64/-/packages) programmatically using curl:
+To pull a release programmatically using curl:
 
 ```
 curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
         "$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/packages/generic/beszel-agent/$CI_COMMIT_TAG/$ZIP_NAME" \
         --output $CI_COMMIT_TAG/$ZIP_NAME"
 ```
-Where CI_COMMIT_TAG is the [release](https://gitlab.prplanit.com/precisionplanit/beszel-agent-win-amd64/-/packages) version, i.e.:
+Where CI_COMMIT_TAG is the release version, i.e.:
 ```
 curl --header "PRIVATE-TOKEN: glpat-Gtpqt1aHVdPSS11XdREm" \
   -L "https://gitlab.prplanit.com/api/v4/projects/33/packages/generic/beszel-agent/v0.11.1/beszel-agent_windows_amd64-v0.11.1.zip" \
   --output beszel-agent_windows_amd64-v0.11.1.zip
 ```
 
-The release binaries are available for direct download [here](https://gitlab.prplanit.com/precisionplanit/beszel-agent-win-amd64/-/packages) as well.
+The release binaries are available for direct download [here](https://gitlab.prplanit.com/precisionplanit/beszel-agent-win-amd64/-/releases) as well.
 
 ---
 
