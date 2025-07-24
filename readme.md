@@ -1,6 +1,11 @@
 # Beszel (Agent) - Windows AMD64 Builds
+### **This repository contains Windows binaries only!**
 
-### ATTENTION: This repository is for Windows binaries only.
+---
+
+Beszel is a lightweight server monitoring platform that includes Docker statistics, historical data, and alert functions.
+
+It has a friendly web interface, simple configuration, and is ready to use out of the box. It supports automatic backup, multi-user, OAuth authentication, and API access.
 
 ## Usage:
 
@@ -22,9 +27,7 @@ curl --header "PRIVATE-TOKEN: glpat-Gtpqt1aHVdPSS11XdREm" \
   --output beszel-agent_windows_amd64-v0.11.1.zip
 ```
 
-Beszel is a lightweight server monitoring platform that includes Docker statistics, historical data, and alert functions.
-
-It has a friendly web interface, simple configuration, and is ready to use out of the box. It supports automatic backup, multi-user, OAuth authentication, and API access.
+---
 
 [![agent Docker Image Size](https://img.shields.io/docker/image-size/henrygd/beszel-agent/latest?logo=docker&label=agent%20image%20size)](https://hub.docker.com/r/henrygd/beszel-agent)
 [![hub Docker Image Size](https://img.shields.io/docker/image-size/henrygd/beszel/latest?logo=docker&label=hub%20image%20size)](https://hub.docker.com/r/henrygd/beszel)
