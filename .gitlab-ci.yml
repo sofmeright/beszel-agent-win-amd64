@@ -12,7 +12,7 @@ build-release:
   before_script:  |
     echo "Setting up Go build environment..."
     echo "Installing dependencies... (git, zip)"
-    apk add --no-cache git p7zip
+    apk add --no-cache git zip
   environment: production
   image: golang:1.24.5-alpine3.22
   rules:
@@ -30,7 +30,7 @@ build-release:
     mkdir -p "$CI_PROJECT_DIR/$OUTPUT_DIR"
     mv $BINARY_NAME "$CI_PROJECT_DIR/$OUTPUT_DIR/"
     cd "$CI_PROJECT_DIR"
-    7z a $ZIP_NAME $OUTPUT_DIR/*
+    zip -r "$ZIP_NAME" "$OUTPUT_DIR"
 
     echo "Release ZIP ready: $ZIP_NAME"
     echo "Artifact to upload:"
@@ -51,21 +51,21 @@ create-release:
     apk add --no-cache curl jq
 
     echo "Creating release $CI_COMMIT_TAG"
-    curl --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" --request POST \
+    curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" --request POST \
       --form "name=Release $CI_COMMIT_TAG" \
       --form "tag_name=$CI_COMMIT_TAG" \
       --form "description=Automated release for $CI_COMMIT_TAG" \
       "$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/releases"
 
     echo "Uploading asset..."
-    curl --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" \
+    curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
       --upload-file "$ZIP_NAME" \
       "$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/uploads" > upload_response.json
 
     UPLOAD_URL=$(jq -r '.url' upload_response.json)
 
     echo "Adding asset link to release - $UPLOAD_URL"
-    curl --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" \
+    curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
       --request POST \
       --header "Content-Type: application/json" \
       --data "{\"name\":\"$ZIP_NAME\",\"url\":\"$GITLAB_DOMAIN/$CI_PROJECT_PATH$UPLOAD_URL\"}" \
