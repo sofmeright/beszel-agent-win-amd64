@@ -7,7 +7,7 @@ Beszel is a lightweight server monitoring platform that includes Docker statisti
 
 It has a friendly web interface, simple configuration, and is ready to use out of the box. It supports automatic backup, multi-user, OAuth authentication, and API access.
 
-This is a clone of the [original repo](https://github.com/sofmeright/beszel-agent-win-amd64), as such this particular page may become outdated. I do not particularly wish to automate github without being given incentive.
+This is a clone of the [original repo](https://gitlab.prplanit.com/precisionplanit/beszel-agent-win-amd64), as such this particular page may become outdated. I do not particularly wish to automate github without being given incentive.
 
 ---
 
