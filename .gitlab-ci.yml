@@ -15,14 +15,15 @@ build-release:
     echo "---------------------------------------------------------------------------"
     echo "AntParade GitOps 🐜 - Preparing $CI_JOB_IMAGE image for build..."
     echo "---------------------------------------------------------------------------"
-    echo "Installing dependencies... (git, zip, dotnet, wget)"
-    apk add --no-cache git zip wget
+    echo "Installing dependencies... (git, zip, bash, dotnet, wget)"
+    apk add --no-cache git zip wget bash curl
     
     # Install .NET 8 SDK (which can build .NET Framework 4.8)
     wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
     chmod +x dotnet-install.sh
-    ./dotnet-install.sh --channel 8.0 --install-dir /usr/share/dotnet
+    bash ./dotnet-install.sh --channel 8.0 --install-dir /usr/share/dotnet
     ln -s /usr/share/dotnet/dotnet /usr/local/bin/dotnet
+    export PATH="/usr/share/dotnet:$PATH"
     
     # Verify installations
     dotnet --version
