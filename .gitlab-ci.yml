@@ -15,8 +15,8 @@ build-release:
     echo "---------------------------------------------------------------------------"
     echo "AntParade GitOps 🐜 - Preparing $CI_JOB_IMAGE image for build..."
     echo "---------------------------------------------------------------------------"
-    echo "Installing dependencies... (git, zip, bash, dotnet, wget)"
-    apk add --no-cache git zip wget bash curl
+    echo "Installing dependencies... (git, zip, wget, curl)"
+    apt-get update && apt-get install -y git zip wget curl
     
     # Install .NET 8 SDK (which can build .NET Framework 4.8)
     wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
@@ -29,7 +29,7 @@ build-release:
     dotnet --version
     go version
   environment: production
-  image: golang:1.24.5-alpine3.22
+  image: golang:1.24.5-bullseye
   rules:
     - if: $CI_COMMIT_TAG
   stage: build
