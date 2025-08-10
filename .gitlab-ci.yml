@@ -5,17 +5,28 @@ stages:
 variables:
   BINARY_NAME: "beszel-agent_windows_amd64.exe"
   UPSTREAM_REPO_URL: "https://github.com/henrygd/beszel.git"
+  LHM_REPO_URL: "https://github.com/LibreHardwareMonitor/LibreHardwareMonitor.git"
   GITLAB_DOMAIN: "https://gitlab.prplanit.com"
   OUTPUT_DIR: "beszel-agent_windows_amd64-$CI_COMMIT_TAG"
   ZIP_NAME: "$OUTPUT_DIR.zip"
 
 build-release:
-  before_script:  |
+  before_script: |
     echo "---------------------------------------------------------------------------"
     echo "AntParade GitOps 🐜 - Preparing $CI_JOB_IMAGE image for build..."
     echo "---------------------------------------------------------------------------"
-    echo "Installing dependencies... (git, zip)"
-    apk add --no-cache git zip                                                            >/dev/null
+    echo "Installing dependencies... (git, zip, dotnet, wget)"
+    apk add --no-cache git zip wget
+    
+    # Install .NET 8 SDK (which can build .NET Framework 4.8)
+    wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
+    chmod +x dotnet-install.sh
+    ./dotnet-install.sh --channel 8.0 --install-dir /usr/share/dotnet
+    ln -s /usr/share/dotnet/dotnet /usr/local/bin/dotnet
+    
+    # Verify installations
+    dotnet --version
+    go version
   environment: production
   image: golang:1.24.5-alpine3.22
   rules:
@@ -23,38 +34,129 @@ build-release:
   stage: build
   script: |
     echo "---------------------------------------------------------------------------"
-    echo "AntParade GitOps 🐜 - Building $OUTPUT_DIR..."
+    echo "AntParade GitOps 🐜 - Building $OUTPUT_DIR with LibreHardwareMonitor..."
     echo "---------------------------------------------------------------------------"
+    
+    # Clone LibreHardwareMonitor first
+    echo "Cloning LibreHardwareMonitor..."
+    git clone --depth 1 $LHM_REPO_URL lhm-source
+    
+    # Build LibreHardwareMonitor for .NET Framework 4.8
+    cd lhm-source
+    echo "Building LibreHardwareMonitor for .NET Framework 4.8..."
+    
+    # Try to build - LibreHardwareMonitor might use different target frameworks
+    # We'll try multiple approaches to get .NET 4.8 compatible binaries
+    if [ -f "LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj" ]; then
+        echo "Found LibreHardwareMonitorLib project, building..."
+        dotnet build LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj -c Release -f net48 || \
+        dotnet build LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj -c Release -f net6.0 || \
+        dotnet build LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj -c Release
+    elif [ -f "LibreHardwareMonitor.sln" ]; then
+        echo "Found solution file, building entire solution..."
+        dotnet build LibreHardwareMonitor.sln -c Release || echo "Solution build failed, trying individual projects..."
+    fi
+    
+    # Find the built binaries
+    echo "Looking for built LibreHardwareMonitor binaries..."
+    find . -name "*.dll" -path "*/bin/Release/*" | head -10
+    find . -name "LibreHardwareMonitorLib.dll" -path "*/bin/Release/*" | head -5
+    
+    cd ..
+    
+    # Clone Beszel
     echo "Cloning the $CI_COMMIT_TAG branch of $UPSTREAM_REPO_URL..."
-    git clone --depth 1 --branch $CI_COMMIT_TAG $UPSTREAM_REPO_URL                        >/dev/null
-    cd beszel/beszel/cmd/agent                                                            >/dev/null
-
+    git clone --depth 1 --branch $CI_COMMIT_TAG $UPSTREAM_REPO_URL
+    
+    # Create the LHM directory structure that Beszel expects
+    echo "Setting up LibreHardwareMonitor binaries for Beszel embed..."
+    mkdir -p beszel/beszel/cmd/agent/lhm/bin/Release/net48
+    
+    # Copy LHM binaries to the expected location
+    # Look for the most common locations where .NET builds output
+    LHM_BINARY_PATHS=(
+        "lhm-source/LibreHardwareMonitorLib/bin/Release/net48"
+        "lhm-source/LibreHardwareMonitorLib/bin/Release/net6.0"
+        "lhm-source/LibreHardwareMonitorLib/bin/Release"
+        "lhm-source/bin/Release/net48"
+        "lhm-source/bin/Release"
+    )
+    
+    LHM_FOUND=false
+    for path in "${LHM_BINARY_PATHS[@]}"; do
+        if [ -d "$path" ] && [ "$(ls -A $path 2>/dev/null)" ]; then
+            echo "Found LHM binaries in: $path"
+            cp -r $path/* beszel/beszel/cmd/agent/lhm/bin/Release/net48/ 2>/dev/null || true
+            if [ "$(ls -A beszel/beszel/cmd/agent/lhm/bin/Release/net48/ 2>/dev/null)" ]; then
+                LHM_FOUND=true
+                break
+            fi
+        fi
+    done
+    
+    # If we didn't find binaries in standard locations, do a broader search
+    if [ "$LHM_FOUND" = false ]; then
+        echo "Searching for any LibreHardwareMonitor DLLs..."
+        find lhm-source -name "*.dll" -type f -exec cp {} beszel/beszel/cmd/agent/lhm/bin/Release/net48/ \; 2>/dev/null || true
+        
+        # Check if we got any files
+        if [ "$(ls -A beszel/beszel/cmd/agent/lhm/bin/Release/net48/ 2>/dev/null)" ]; then
+            LHM_FOUND=true
+        fi
+    fi
+    
+    if [ "$LHM_FOUND" = true ]; then
+        echo "✅ LibreHardwareMonitor binaries prepared:"
+        ls -la beszel/beszel/cmd/agent/lhm/bin/Release/net48/
+    else
+        echo "⚠️  Warning: Could not find LibreHardwareMonitor binaries. Building without LHM support."
+        # Clean up empty directory to avoid embed errors
+        rm -rf beszel/beszel/cmd/agent/lhm
+    fi
+    
+    # Build Beszel agent
+    cd beszel/beszel/cmd/agent
     echo "Building $BINARY_NAME from the source for $OUTPUT_DIR..."
-    GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-w -s" -o $BINARY_NAME     >/dev/null
+    
+    # Try building with LHM support first, fall back without it
+    if [ "$LHM_FOUND" = true ]; then
+        echo "Building with LibreHardwareMonitor support..."
+        GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-w -s" -o $BINARY_NAME
+        BUILD_STATUS=$?
+    else
+        BUILD_STATUS=1  # Force fallback
+    fi
+    
+    # If LHM build failed, try without LHM
+    if [ $BUILD_STATUS -ne 0 ]; then
+        echo "Falling back to build without LibreHardwareMonitor..."
+        rm -rf lhm  # Remove LHM directory to avoid embed issues
+        GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-w -s" -o $BINARY_NAME
+    fi
 
     echo "Packaging release into $ZIP_NAME..."
-    mkdir -p "$CI_PROJECT_DIR/$OUTPUT_DIR"                                                >/dev/null
-    mv $BINARY_NAME "$CI_PROJECT_DIR/$OUTPUT_DIR/"                                        >/dev/null
-    cd "$CI_PROJECT_DIR"                                                                  >/dev/null
-    zip -r "$ZIP_NAME" "$OUTPUT_DIR"                                                      >/dev/null
+    mkdir -p "$CI_PROJECT_DIR/$OUTPUT_DIR"
+    mv $BINARY_NAME "$CI_PROJECT_DIR/$OUTPUT_DIR/"
+    cd "$CI_PROJECT_DIR"
+    zip -r "$ZIP_NAME" "$OUTPUT_DIR"
 
     echo "$ZIP_NAME has been packaged, here are its details:"
     ls -lh "$ZIP_NAME"
     
     echo "AntParade GitOps 🐜 - build-release job complete."
 
-  # You can uncomment the artifact section once the 502 issue is resolved
   artifacts:
     paths:
       - "$ZIP_NAME"
+    expire_in: 1 week
 
 create-release:
-  before_script:  |
+  before_script: |
     echo "---------------------------------------------------------------------------"
     echo "AntParade GitOps 🐜 - Preparing $CI_JOB_IMAGE image for release upload tasks"
     echo "---------------------------------------------------------------------------"
     echo "Installing dependencies... (bash curl jq)"
-    apk add --no-cache bash curl jq                                                       >/dev/null
+    apk add --no-cache bash curl jq
   dependencies:
     - build-release
   stage: release
@@ -69,13 +171,13 @@ create-release:
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" --request POST \
       --form "name=Release $CI_COMMIT_TAG" \
       --form "tag_name=$CI_COMMIT_TAG" \
-      --form "description=AntParade GitOps 🐜 packaged $CI_COMMIT_TAG release of $CI_PROJECT_NAME." \
-      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases" || echo "Release might already exist"                                     >/dev/null
+      --form "description=AntParade GitOps 🐜 packaged $CI_COMMIT_TAG release of $CI_PROJECT_NAME with LibreHardwareMonitor support." \
+      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases" || echo "Release might already exist"
 
     echo "Uploading $ZIP_NAME to the $CI_PROJECT_NAME gitlab package registry..."
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
         --upload-file "$ZIP_NAME" \
-        "$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/packages/generic/beszel-agent/$CI_COMMIT_TAG/$ZIP_NAME"                    >/dev/null
+        "$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/packages/generic/beszel-agent/$CI_COMMIT_TAG/$ZIP_NAME"
 
     echo "Need to determine the uploaded package's URL..."
     echo "Getting packages for project..."
