@@ -103,10 +103,12 @@ build-release:
     # Copy LHM binaries to the expected location
     # Look for the most common locations where .NET builds output
     LHM_BINARY_PATHS=(
-        "lhm-source/LibreHardwareMonitorLib/bin/Release/net48"
-        "lhm-source/LibreHardwareMonitorLib/bin/Release/net6.0"
-        "lhm-source/LibreHardwareMonitorLib/bin/Release"
         "lhm-source/bin/Release/net48"
+        "lhm-source/bin/Release/net472"
+        "lhm-source/bin/Release/net6.0"
+        "lhm-source/LibreHardwareMonitorLib/bin/Release/net48"
+        "lhm-source/LibreHardwareMonitorLib/bin/Release/net472"
+        "lhm-source/LibreHardwareMonitorLib/bin/Release/net6.0"
         "lhm-source/bin/Release"
     )
     
@@ -114,9 +116,13 @@ build-release:
     for path in "${LHM_BINARY_PATHS[@]}"; do
         if [ -d "$path" ] && [ "$(ls -A $path 2>/dev/null)" ]; then
             echo "Found LHM binaries in: $path"
+            # Copy all files from this directory
             cp -r $path/* beszel/beszel/cmd/agent/lhm/bin/Release/net48/ 2>/dev/null || true
+            
+            # Check if we successfully copied files
             if [ "$(ls -A beszel/beszel/cmd/agent/lhm/bin/Release/net48/ 2>/dev/null)" ]; then
                 LHM_FOUND=true
+                echo "✅ Successfully copied LHM binaries from $path"
                 break
             fi
         fi
