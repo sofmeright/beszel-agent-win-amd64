@@ -38,165 +38,28 @@ build-release:
     echo "AntParade GitOps 🐜 - Building $OUTPUT_DIR with LibreHardwareMonitor..."
     echo "---------------------------------------------------------------------------"
     
-    # Clone LibreHardwareMonitor first
-    echo "Cloning LibreHardwareMonitor..."
-    git clone --depth 1 $LHM_REPO_URL lhm-source
-    
-    # Build LibreHardwareMonitor for .NET Framework 4.8
-    cd lhm-source
-    echo "Building LibreHardwareMonitor for .NET Framework 4.8..."
-    
-    # First, let's see what's in the repository
-    echo "=== LibreHardwareMonitor repository structure ==="
-    find . -name "*.csproj" | head -10
-    find . -name "*.sln" | head -5
-    ls -la
-    
-    # Try to build - LibreHardwareMonitor might use different target frameworks
-    # We'll try multiple approaches to get .NET 4.8 compatible binaries
-    BUILD_SUCCESS=false
-    
-    if [ -f "LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj" ]; then
-        echo "Found LibreHardwareMonitorLib project, building..."
-        echo "=== Project file content ==="
-        head -20 LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj
-        
-        # Try to build specifically for net48 first
-        echo "Attempting to build for .NET Framework 4.8 (net48)..."
-        dotnet build LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj -c Release -f net48 -v normal && BUILD_SUCCESS=true
-        
-        if [ "$BUILD_SUCCESS" = false ]; then
-            echo "net48 build failed, trying to modify project to support net48..."
-            
-            # Check if net48 is already supported
-            if grep -q "net48" LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj; then
-                echo "net48 is already in project file but build failed"
-            else
-                echo "Adding net48 to target frameworks..."
-                # Create a backup and modify the project file
-                cp LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj.backup
-                
-                # Add net48 to TargetFrameworks if it exists, or create TargetFramework with net48
-                if grep -q "TargetFrameworks" LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj; then
-                    sed -i 's/<TargetFrameworks>\([^<]*\)<\/TargetFrameworks>/<TargetFrameworks>\1;net48<\/TargetFrameworks>/' LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj
-                elif grep -q "TargetFramework" LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj; then
-                    sed -i 's/<TargetFramework>\([^<]*\)<\/TargetFramework>/<TargetFrameworks>\1;net48<\/TargetFrameworks>/' LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj
-                else
-                    # Add TargetFramework after PropertyGroup
-                    sed -i '/<PropertyGroup>/a\    <TargetFramework>net48</TargetFramework>' LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj
-                fi
-                
-                echo "Modified project file:"
-                head -20 LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj
-                
-                # Try building again
-                dotnet build LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj -c Release -f net48 -v normal && BUILD_SUCCESS=true
-            fi
-        fi
-        
-        if [ "$BUILD_SUCCESS" = false ]; then
-            echo "net48 build still failed, trying standard build..."
-            dotnet build LibreHardwareMonitorLib/LibreHardwareMonitorLib.csproj -c Release -v normal && BUILD_SUCCESS=true
-        fi
-        
-    elif [ -f "LibreHardwareMonitor.sln" ]; then
-        echo "Found solution file, building entire solution..."
-        dotnet build LibreHardwareMonitor.sln -c Release -v normal && BUILD_SUCCESS=true
-    else
-        echo "No standard project files found, looking for alternatives..."
-        find . -name "*.csproj" -exec echo "Found: {}" \;
-        # Try building the first .csproj we find
-        FIRST_PROJ=$(find . -name "*.csproj" | head -1)
-        if [ -n "$FIRST_PROJ" ]; then
-            echo "Trying to build: $FIRST_PROJ"
-            dotnet build "$FIRST_PROJ" -c Release -v normal && BUILD_SUCCESS=true
-        fi
-    fi
-    
-    echo "=== Build completed. Success: $BUILD_SUCCESS ==="
-    echo "=== Looking for all DLL files in bin directories ==="
-    find . -name "*.dll" -path "*/bin/*" | head -20
-    echo "=== Looking for any Release directories ==="
-    find . -type d -name "Release" | head -10
-    echo "=== Contents of any Release directories ==="
-    find . -type d -name "Release" -exec ls -la {} \; | head -50
-    
-    cd ..
-    
-    # Clone Beszel
+    # Clone Beszel first (we don't need to build LibreHardwareMonitor separately!)
     echo "Cloning the $CI_COMMIT_TAG branch of $UPSTREAM_REPO_URL..."
     git clone --depth 1 --branch $CI_COMMIT_TAG $UPSTREAM_REPO_URL
+    cd beszel/beszel
     
-    # Create the LHM directory structure that Beszel expects
-    echo "Setting up LibreHardwareMonitor binaries for Beszel embed..."
-    mkdir -p beszel/beszel/cmd/agent/lhm/bin/Release
+    echo "Preparing Go dependencies..."
+    go mod tidy
     
-    # Copy LHM binaries to the expected location
-    # Since LibreHardwareMonitor builds for net472, but Beszel expects net48,
-    # we'll copy the net472 binaries to the net48 directory
-    LHM_FOUND=false
+    # Build the LibreHardwareMonitor wrapper as per official docs
+    echo "Building LibreHardwareMonitor .NET wrapper (required for Windows builds)..."
+    dotnet build -c Release ./internal/agent/lhm/beszel_lhm.csproj
     
-    # First, try to find and copy the net472 binaries directly to net48
-    if [ -d "lhm-source/bin/Release/net472" ]; then
-        echo "Found LHM net472 binaries, copying to net48 directory..."
-        cp -r "lhm-source/bin/Release/net472" "beszel/beszel/cmd/agent/lhm/bin/Release/net48"
-        LHM_FOUND=true
-        echo "✅ Successfully copied net472 binaries to net48 directory"
-    elif [ -d "lhm-source/LibreHardwareMonitorLib/bin/Release/net472" ]; then
-        echo "Found LHM net472 binaries in LibreHardwareMonitorLib, copying to net48 directory..."
-        cp -r "lhm-source/LibreHardwareMonitorLib/bin/Release/net472" "beszel/beszel/cmd/agent/lhm/bin/Release/net48"
-        LHM_FOUND=true
-        echo "✅ Successfully copied net472 binaries to net48 directory"
-    else
-        # Fallback: look for any net472 directory and copy it
-        NET472_DIR=$(find lhm-source -type d -name "net472" -path "*/bin/Release/*" | head -1)
-        if [ -n "$NET472_DIR" ] && [ -d "$NET472_DIR" ]; then
-            echo "Found net472 directory at: $NET472_DIR"
-            cp -r "$NET472_DIR" "beszel/beszel/cmd/agent/lhm/bin/Release/net48"
-            LHM_FOUND=true
-            echo "✅ Successfully copied net472 binaries to net48 directory"
-        fi
-    fi
-    
-    if [ "$LHM_FOUND" = true ]; then
-        echo "✅ LibreHardwareMonitor binaries prepared for net48:"
-        ls -la beszel/beszel/cmd/agent/lhm/bin/Release/net48/
-        
-        # Verify the embed pattern will work
-        echo "Verifying embed pattern..."
-        if [ -d "beszel/beszel/cmd/agent/lhm/bin/Release/net48" ] && [ "$(ls -A beszel/beszel/cmd/agent/lhm/bin/Release/net48/)" ]; then
-            echo "✅ net48 directory exists and contains files - embed should work!"
-        else
-            echo "❌ net48 directory is empty or missing"
-            LHM_FOUND=false
-        fi
-    fi
-    
-    if [ "$LHM_FOUND" = false ]; then
-        echo "⚠️  Warning: Could not find LibreHardwareMonitor net472 binaries. Building without LHM support."
-        # Clean up empty directory to avoid embed errors
-        rm -rf beszel/beszel/cmd/agent/lhm
-    fi
+    # Verify the LHM build created the expected files
+    echo "=== Checking LibreHardwareMonitor build output ==="
+    find ./internal/agent/lhm -name "*.dll" | head -10
+    find ./internal/agent/lhm -type d -name "net48" -exec echo "Found net48: {}" \; -exec ls -la {} \;
     
     # Build Beszel agent
-    cd beszel/beszel/cmd/agent
+    cd cmd/agent
     echo "Building $BINARY_NAME from the source for $OUTPUT_DIR..."
-    
-    # Try building with LHM support first, fall back without it
-    if [ "$LHM_FOUND" = true ]; then
-        echo "Building with LibreHardwareMonitor support..."
-        GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-w -s" -o $BINARY_NAME
-        BUILD_STATUS=$?
-    else
-        BUILD_STATUS=1  # Force fallback
-    fi
-    
-    # If LHM build failed, try without LHM
-    if [ $BUILD_STATUS -ne 0 ]; then
-        echo "Falling back to build without LibreHardwareMonitor..."
-        rm -rf lhm  # Remove LHM directory to avoid embed issues
-        GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-w -s" -o $BINARY_NAME
-    fi
+    echo "Building with LibreHardwareMonitor support..."
+    GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-w -s" -o $BINARY_NAME
 
     echo "Packaging release into $ZIP_NAME..."
     mkdir -p "$CI_PROJECT_DIR/$OUTPUT_DIR"
