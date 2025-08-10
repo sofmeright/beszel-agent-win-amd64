@@ -78,12 +78,12 @@ build-release:
     expire_in: 1 week
 
 create-release:
-  before_script: |
+  before_script:  |
     echo "---------------------------------------------------------------------------"
     echo "AntParade GitOps 🐜 - Preparing $CI_JOB_IMAGE image for release upload tasks"
     echo "---------------------------------------------------------------------------"
     echo "Installing dependencies... (bash curl jq)"
-    apk add --no-cache bash curl jq
+    apk add --no-cache bash curl jq                                                       >/dev/null
   dependencies:
     - build-release
   stage: release
@@ -98,13 +98,13 @@ create-release:
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" --request POST \
       --form "name=Release $CI_COMMIT_TAG" \
       --form "tag_name=$CI_COMMIT_TAG" \
-      --form "description=AntParade GitOps 🐜 packaged $CI_COMMIT_TAG release of $CI_PROJECT_NAME with LibreHardwareMonitor support." \
-      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases" || echo "Release might already exist"
+      --form "description=AntParade GitOps 🐜 packaged $CI_COMMIT_TAG release of $CI_PROJECT_NAME." \
+      "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases" || echo "Release might already exist"                                     >/dev/null
 
     echo "Uploading $ZIP_NAME to the $CI_PROJECT_NAME gitlab package registry..."
     curl --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
         --upload-file "$ZIP_NAME" \
-        "$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/packages/generic/beszel-agent/$CI_COMMIT_TAG/$ZIP_NAME"
+        "$GITLAB_DOMAIN/api/v4/projects/$CI_PROJECT_ID/packages/generic/beszel-agent/$CI_COMMIT_TAG/$ZIP_NAME"                    >/dev/null
 
     echo "Need to determine the uploaded package's URL..."
     echo "Getting packages for project..."
